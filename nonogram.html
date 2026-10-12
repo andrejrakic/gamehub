@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nonogram</title>
+<meta name="theme-color" content="#1d2b3d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🖼️</text></svg>">
+<style>
+:root{--bg:#1d2b3d;--fg:#fff;--btn:#33506f;--ok:#43c25a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="light"]){--bg:#1d2b3d}}
+:root[data-theme="dark"]{--bg:#1d2b3d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;
+-webkit-tap-highlight-color:transparent;touch-action:manipulation;overflow-x:hidden}
+.top{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 8px 4px;flex-wrap:wrap}
+.top button,.home{width:46px;height:46px;border-radius:50%;border:0;background:var(--btn);color:var(--fg);font-size:22px;line-height:1;
+display:flex;align-items:center;justify-content:center;text-decoration:none}
+.top button:active{transform:scale(.92)}
+.lvl{display:flex;align-items:center;gap:6px;font-size:28px;font-weight:800;min-width:84px;justify-content:center}
+.lvl button{width:40px;height:40px;font-size:16px}
+@keyframes hop{40%{transform:translateY(-10px) scale(1.08)}}
+#win{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,18,30,.88);gap:12px;z-index:9}
+#win.on{display:flex}
+#win .big{font-size:96px;animation:pop .6s}
+#win .st{font-size:44px;letter-spacing:6px}
+#win button{width:96px;height:96px;border-radius:50%;border:0;background:var(--ok);color:#fff;font-size:44px;margin-top:16px}
+@keyframes pop{0%{transform:scale(.2) rotate(-20deg)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+:root{--s:min(92vw,440px)}
+#g{--cs:calc(var(--s) / (var(--n) + var(--k)));display:grid;width:var(--s);margin:24px auto}
+.ch{display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:2px;height:calc(var(--cs) * var(--k));padding-bottom:4px;box-sizing:border-box;
+font-size:calc(var(--cs) * .5);font-weight:800;line-height:1.05}
+.rh{display:flex;justify-content:flex-end;align-items:center;gap:7px;padding-right:8px;font-size:calc(var(--cs) * .5);font-weight:800}
+.d{opacity:.45}
+.d span{color:#9ccc65}
+.c{aspect-ratio:1;background:#34495f;border:2px solid #1d2b3d;border-radius:7px;box-sizing:border-box;display:flex;align-items:center;justify-content:center;
+color:rgba(255,255,255,.55);font-size:calc(var(--cs) * .5)}
+.c.f{background:#ffb74d}
+.cheer .c{animation:hop .7s ease both;animation-delay:calc(var(--i)*.08s)}
+
+</style>
+</head>
+<body>
+<div class="top">
+  <a class="home" href="index.html">🏠</a>
+  <button id="undo" aria-label="undo">↶</button>
+  <button id="hint" aria-label="hint">💡</button>
+  <div class="lvl"><button id="prev">◀</button><span id="lv">1</span><button id="next">▶</button></div>
+  <button id="redo" aria-label="restart">↻</button>
+</div>
+<div id="g"></div>
+<div id="win"><div class="big">🖼️</div><div class="st">⭐⭐⭐</div><button id="go">▶</button></div>
+<script>
+const $=s=>document.querySelector(s);
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+let lvl=1,n=5,sol=[],g=[],rc=[],cc=[],hist=[],lock=false;
+try{lvl=Math.max(1,+localStorage.getItem('n_lvl')||1)}catch(e){}
+const J=JSON.stringify;
+const runs=a=>{const r=[];let k=0;for(const v of a){if(v==1)k++;else if(k){r.push(k);k=0}}if(k)r.push(k);return r};
+const row=(a,i)=>a.slice(i*n,i*n+n),col=(a,j)=>[...Array(n)].map((_,i)=>a[i*n+j]);
+
+// counts solutions (stops at 2): rows are filled one by one, columns are checked as they grow
+function count(R,C){
+  const pats=R.map(cl=>{const o=[];for(let m=0;m<1<<n;m++){const a=[...Array(n)].map((_,j)=>m>>j&1);if(J(runs(a))==J(cl))o.push(a)}return o});
+  let k=0;const cols=C.map(()=>[]);
+  const okc=(j,fin)=>{const a=cols[j],r=runs(a),cl=C[j];
+    if(fin)return J(r)==J(cl);
+    if(r.length>cl.length)return false;
+    const open=a[a.length-1]==1;
+    for(let q=0;q<r.length;q++){if(open&&q==r.length-1){if(r[q]>cl[q])return false}else if(r[q]!=cl[q])return false}
+    return true};
+  const go=i=>{if(k>1)return;if(i==n){k++;return}
+    for(const p of pats[i]){p.forEach((v,j)=>cols[j].push(v));
+      let ok=true;for(let j=0;j<n&&ok;j++)ok=okc(j,i==n-1);
+      if(ok)go(i+1);p.forEach((v,j)=>cols[j].pop());if(k>1)return}};
+  go(0);return k}
+
+function mk(s){const R=[],C=[];for(let i=0;i<n;i++){R.push(runs(row(s,i)));C.push(runs(col(s,i)))}return[s,R,C]}
+
+function gen(L){const r=rng(L*86969+21);n=L<=3?4:L<=9?5:L<=17?6:7;let best=null;
+  for(let t=0;t<60;t++){const s=Array(n*n).fill(0).map(()=>r()<.6?1:0),b=mk(s);
+    if(b[1].some(x=>!x.length)||b[2].some(x=>!x.length))continue;
+    best=b;if(count(b[1],b[2])==1)return b}
+  return best||mk(Array(n*n).fill(0).map((_,i)=>i%n==(i/n|0)?1:0))}
+
+const solved=()=>rc.every((cl,i)=>J(runs(row(g,i)))==J(cl))&&cc.every((cl,j)=>J(runs(col(g,j)))==J(cl));
+
+function render(){const G=$('#g');G.style.setProperty('--n',n);G.style.setProperty('--k',Math.ceil(n/2)*.8);
+  G.style.gridTemplateColumns=`calc(var(--cs) * var(--k)) repeat(${n},var(--cs))`;
+  const sp=cl=>(cl.length?cl:[0]).map(x=>`<span>${x}</span>`).join('');
+  let h='<div></div>'+cc.map((cl,j)=>`<div class="ch${J(runs(col(g,j)))==J(cl)?' d':''}">${sp(cl)}</div>`).join('');
+  for(let i=0;i<n;i++){
+    h+=`<div class="rh${J(runs(row(g,i)))==J(rc[i])?' d':''}">${sp(rc[i])}</div>`;
+    for(let j=0;j<n;j++){const v=g[i*n+j];h+=`<div class="c${v==1?' f':''}" data-i="${i*n+j}">${v==2?'✕':''}</div>`}}
+  G.innerHTML=h;$('#lv').textContent=lvl}
+
+function check(){if(lock||!solved())return;lock=true;
+  const G=$('#g');G.classList.add('cheer');
+  [...G.querySelectorAll('.c')].forEach((e,i)=>e.style.setProperty('--i',i%n+((i/n)|0)));
+  setTimeout(()=>{G.classList.remove('cheer');lock=false;$('#win').classList.add('on')},1400)}
+
+function load(L){lvl=Math.max(1,L);try{localStorage.setItem('n_lvl',lvl)}catch(e){}
+  [sol,rc,cc]=gen(lvl);g=Array(n*n).fill(0);hist=[];$('#win').classList.remove('on');render()}
+
+$('#g').onclick=e=>{const d=e.target.closest('.c');if(!d||lock)return;
+  const i=+d.dataset.i;hist.push(g.slice());g[i]=(g[i]+1)%3;render();check()};
+$('#undo').onclick=()=>{if(hist.length&&!lock){g=hist.pop();render()}};
+$('#redo').onclick=()=>{if(lock)return;hist.push(g.slice());g=Array(n*n).fill(0);render()};
+$('#prev').onclick=()=>load(lvl-1);
+$('#next').onclick=()=>load(lvl+1);
+$('#go').onclick=()=>load(lvl+1);
+$('#hint').onclick=()=>{if(lock)return;
+  const i=g.findIndex((v,k)=>(sol[k]==1&&v!=1)||(sol[k]==0&&v==1));if(i<0)return;
+  hist.push(g.slice());g[i]=sol[i]?1:2;render();check()};
+load(lvl);
+
+</script>
+</body>
+</html>

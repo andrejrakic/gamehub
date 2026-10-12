@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mastermind</title>
+<meta name="theme-color" content="#1d2b3d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🎯</text></svg>">
+<style>
+:root{--bg:#1d2b3d;--fg:#fff;--btn:#33506f;--ok:#43c25a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="light"]){--bg:#1d2b3d}}
+:root[data-theme="dark"]{--bg:#1d2b3d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;
+-webkit-tap-highlight-color:transparent;touch-action:manipulation;overflow-x:hidden}
+.top{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 8px 4px;flex-wrap:wrap}
+.top button,.home{width:46px;height:46px;border-radius:50%;border:0;background:var(--btn);color:var(--fg);font-size:22px;line-height:1;
+display:flex;align-items:center;justify-content:center;text-decoration:none}
+.top button:active{transform:scale(.92)}
+.lvl{display:flex;align-items:center;gap:6px;font-size:28px;font-weight:800;min-width:84px;justify-content:center}
+.lvl button{width:40px;height:40px;font-size:16px}
+@keyframes hop{40%{transform:translateY(-10px) scale(1.08)}}
+#win{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,18,30,.88);gap:12px;z-index:9}
+#win.on{display:flex}
+#win .big{font-size:96px;animation:pop .6s}
+#win .st{font-size:44px;letter-spacing:6px}
+#win button{width:96px;height:96px;border-radius:50%;border:0;background:var(--ok);color:#fff;font-size:44px;margin-top:16px}
+@keyframes pop{0%{transform:scale(.2) rotate(-20deg)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+:root{--s:min(94vw,440px);--p:38px}
+#b{margin:14px auto 8px}
+.row{display:flex;align-items:center;justify-content:center;gap:9px;margin:5px 0}
+.row.sec{padding-bottom:10px;margin-bottom:8px;border-bottom:2px solid rgba(255,255,255,.15)}
+.p{display:block;width:var(--p);height:var(--p);border-radius:50%;background:#2b4058;box-shadow:inset 0 -3px 0 rgba(0,0,0,.2);box-sizing:border-box}
+.p.e{box-shadow:inset 0 0 0 2px rgba(255,255,255,.12)}
+.row.on .p.e{box-shadow:inset 0 0 0 3px rgba(255,255,255,.5)}
+.p.q{display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800;color:#fff;background:#12202f}
+.fb{display:grid;gap:4px;margin-left:8px;width:46px}
+.fb u{display:block;width:14px;height:14px;border-radius:50%;box-shadow:inset 0 0 0 2px rgba(255,255,255,.15);justify-self:center}
+.fb u.x{background:#43c25a;box-shadow:none}
+.fb u.w{background:transparent;box-shadow:inset 0 0 0 3px #fff}
+.cheer .p{animation:hop .6s ease both;animation-delay:calc(var(--i)*.1s)}
+#pal{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:10px 8px 6px}
+#pal button{width:46px;height:46px;border-radius:50%;border:0;box-shadow:inset 0 -4px 0 rgba(0,0,0,.2)}
+#pal button:active{transform:scale(.9)}
+#ok{width:76px;height:54px;border-radius:27px;border:0;background:var(--ok);color:#fff;font-size:28px;margin:6px 0 24px}
+#ok:disabled{opacity:.35}
+
+</style>
+</head>
+<body>
+<div class="top">
+  <a class="home" href="index.html">🏠</a>
+  <button id="undo" aria-label="undo">↶</button>
+  <button id="hint" aria-label="hint">💡</button>
+  <div class="lvl"><button id="prev">◀</button><span id="lv">1</span><button id="next">▶</button></div>
+  <button id="redo" aria-label="restart">↻</button>
+</div>
+<div id="b"></div><div id="pal"></div><button id="ok">✔</button>
+<div id="win"><div class="big">🎉</div><div class="st">⭐⭐⭐</div><button id="go">▶</button></div>
+<script>
+const $=s=>document.querySelector(s);
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+const PAL=['#e53935','#1e88e5','#fdd835','#43a047','#8e24aa','#fb8c00','#00acc1','#f48fb1'],MAXR=10;
+let lvl=1,len=4,nc=5,rep=false,sec=[],gs=[],cur=[],done=false,won=false;
+try{lvl=Math.max(1,+localStorage.getItem('m_lvl')||1)}catch(e){}
+
+// [right colour in the right place, right colour in the wrong place]
+function fb(g,s){let ex=0;const a={},b={};
+  g.forEach((v,i)=>{if(v==s[i])ex++;else{a[v]=(a[v]||0)+1;b[s[i]]=(b[s[i]]||0)+1}});
+  let w=0;for(const k in a)w+=Math.min(a[k],b[k]||0);return[ex,w]}
+
+function render(){
+  let h=`<div class="row sec">${sec.map(c=>done?`<i class="p" style="background:${PAL[c]}"></i>`:'<i class="p q">?</i>').join('')}</div>`;
+  for(let r=0;r<MAXR;r++){const g=gs[r],cu=r==gs.length&&!done;
+    const sl=[...Array(len)].map((_,i)=>{const v=g?g[i]:cu?cur[i]:-1;
+      return `<i class="p${v<0?' e':''}${cu?' cu':''}" data-s="${i}" style="${v>=0?'background:'+PAL[v]:''}"></i>`}).join('');
+    let f='';
+    if(g){const[e,w]=fb(g,sec);f=[...Array(len)].map((_,i)=>`<u class="${i<e?'x':i<e+w?'w':''}"></u>`).join('')}
+    else f='<u></u>'.repeat(len);
+    h+=`<div class="row${cu?' on':''}" data-r="${r}">${sl}<div class="fb" style="grid-template-columns:repeat(${Math.ceil(len/2)},1fr)">${f}</div></div>`}
+  $('#b').innerHTML=h;
+  $('#pal').innerHTML=PAL.slice(0,nc).map((c,i)=>`<button data-c="${i}" style="background:${c}"></button>`).join('');
+  $('#ok').disabled=done||cur.includes(-1);$('#lv').textContent=lvl}
+
+function end(w){done=true;won=w;render();
+  if(w){const row=$(`.row[data-r="${gs.length-1}"]`);row.classList.add('cheer');
+    [...row.querySelectorAll('.p')].forEach((e,i)=>e.style.setProperty('--i',i))}
+  setTimeout(()=>{$('#win .big').textContent=w?'🎉':'🤔';$('#win').classList.add('on')},w?1300:900)}
+
+function load(L){lvl=Math.max(1,L);try{localStorage.setItem('m_lvl',lvl)}catch(e){}
+  const r=rng(lvl*99991+3);
+  [len,nc,rep]=lvl<=3?[3,4,false]:lvl<=8?[4,5,false]:lvl<=15?[4,6,false]:lvl<=24?[4,6,true]:[5,7,true];
+  const pool=[...Array(nc).keys()];sec=[];
+  for(let i=0;i<len;i++){const k=r()*pool.length|0;sec.push(pool[k]);if(!rep)pool.splice(k,1)}
+  gs=[];cur=Array(len).fill(-1);done=false;won=false;$('#win').classList.remove('on');render()}
+
+$('#pal').onclick=e=>{const b=e.target.closest('[data-c]');if(!b||done)return;
+  const i=cur.indexOf(-1);if(i>=0){cur[i]=+b.dataset.c;render()}};
+$('#b').onclick=e=>{const s=e.target.closest('.cu');if(s&&!done){cur[+s.dataset.s]=-1;render()}};
+$('#ok').onclick=()=>{if(done||cur.includes(-1))return;
+  gs.push(cur.slice());cur=Array(len).fill(-1);
+  if(fb(gs[gs.length-1],sec)[0]==len)end(true);
+  else if(gs.length>=MAXR)end(false);
+  else render()};
+$('#undo').onclick=()=>{if(done)return;for(let i=len-1;i>=0;i--)if(cur[i]>=0){cur[i]=-1;break}render()};
+$('#hint').onclick=()=>{if(done)return;const i=cur.findIndex((v,k)=>v!=sec[k]);if(i>=0){cur[i]=sec[i];render()}};
+$('#redo').onclick=()=>load(lvl);
+$('#prev').onclick=()=>load(lvl-1);
+$('#next').onclick=()=>load(lvl+1);
+$('#go').onclick=()=>load(won?lvl+1:lvl);
+load(lvl);
+
+</script>
+</body>
+</html>
