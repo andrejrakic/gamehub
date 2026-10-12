@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Boce</title>
+<meta name="theme-color" content="#1d2b3d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🧪</text></svg>">
+<style>
+:root{--bg:#1d2b3d;--fg:#fff;--btn:#33506f;--glass:rgba(255,255,255,.4);--ok:#43c25a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="light"]){--bg:#1d2b3d}}
+:root[data-theme="dark"]{--bg:#1d2b3d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;overflow-x:hidden}
+.top{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 8px 4px;flex-wrap:wrap}
+.top button{width:46px;height:46px;border-radius:50%;border:0;background:var(--btn);color:var(--fg);font-size:24px;line-height:1}
+.top button:active{transform:scale(.92)}
+.lvl{display:flex;align-items:center;gap:6px;font-size:28px;font-weight:800;min-width:84px;justify-content:center}
+.lvl button{width:40px;height:40px;font-size:16px}
+.home{display:flex;align-items:center;justify-content:center;width:46px;height:46px;border-radius:50%;background:var(--btn);color:var(--fg);font-size:22px;text-decoration:none}
+#board{display:grid;grid-template-columns:repeat(auto-fit,72px);justify-content:center;gap:34px 10px;padding:34px 12px 40px;max-width:520px;width:100%;box-sizing:border-box}
+.bt{position:relative;width:58px;height:156px;margin:0 auto;box-sizing:border-box;border:3px solid var(--glass);border-top:0;
+border-radius:6px 6px 24px 24px;display:flex;flex-direction:column-reverse;padding:2px;transition:transform .18s}
+.bt::before{content:"";position:absolute;left:12px;right:12px;top:-12px;height:12px;border:3px solid var(--glass);border-bottom:0;border-radius:6px 6px 0 0}
+.bt i{display:block;height:25%;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.12)}
+.bt i:first-child{border-radius:3px 3px 18px 18px}
+.bt.sel{transform:translateY(-18px)}
+.bt.ok::after{content:"✓";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:900;color:#fff;
+text-shadow:0 0 0 #000,0 2px 6px rgba(0,0,0,.6)}
+.bt.ok::before{background:#d9954a;border-color:#d9954a}
+.bt.hint{animation:pulse .5s 3}
+@keyframes pulse{50%{transform:translateY(-12px);filter:brightness(1.4)}}
+#win{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,18,30,.88);gap:12px;z-index:9}
+#win.on{display:flex}
+#win .big{font-size:96px;animation:pop .6s}
+#win .st{font-size:44px;letter-spacing:6px}
+#win button{width:96px;height:96px;border-radius:50%;border:0;background:var(--ok);color:#fff;font-size:44px;margin-top:16px}
+@keyframes pop{0%{transform:scale(.2) rotate(-20deg)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="top">
+  <a class="home" href="index.html">🏠</a>
+  <button id="undo" aria-label="undo">↶</button>
+  <button id="hint" aria-label="hint">💡</button>
+  <div class="lvl"><button id="prev">◀</button><span id="lv">1</span><button id="next">▶</button></div>
+  <button id="add" aria-label="extra bottle">➕</button>
+  <button id="redo" aria-label="restart">↻</button>
+</div>
+<div id="board"></div>
+<div id="win"><div class="big">🎉</div><div class="st">⭐⭐⭐</div><button id="go">▶</button></div>
+<script>
+const COL=['#e53935','#1e88e5','#fdd835','#f5f5f5','#5d1a3a','#43a047','#fb8c00','#8e24aa','#00acc1','#f48fb1','#8d6e63','#9ccc65'];
+const $=s=>document.querySelector(s);
+let lvl=1,bt=[],hist=[],sel=-1,added=false;
+try{lvl=Math.max(1,+localStorage.getItem('ws_lvl')||1)}catch(e){}
+
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const full=b=>b.length==4&&b.every(x=>x==b[0]);
+const fin=b=>b.length==0||full(b);
+const solved=s=>s.every(fin);
+const canPour=(a,b)=>a.length&&b.length<4&&(!b.length||b[b.length-1]==a[a.length-1]);
+
+function pour(s,i,j){const a=s[i],b=s[j],c=a[a.length-1];let n=0;
+  while(n<a.length&&a[a.length-1-n]==c)n++;
+  n=Math.min(n,4-b.length);for(let k=0;k<n;k++)b.push(a.pop())}
+
+function moves(s){const m=[];
+  for(let i=0;i<s.length;i++){const a=s[i];if(!a.length||full(a))continue;
+    const u=a.every(x=>x==a[0]);
+    for(let j=0;j<s.length;j++){if(i==j||!canPour(a,s[j]))continue;
+      if(u&&!s[j].length)continue;m.push([i,j,s[j].length?0:1])}}
+  return m.sort((x,y)=>x[2]-y[2])}
+
+function solve(s0,cap=9000){const seen=new Set();let nodes=0;
+  const dfs=(s,p)=>{if(solved(s))return p;
+    const k=s.map(b=>b.join()).sort().join('|');
+    if(seen.has(k)||++nodes>cap)return null;seen.add(k);
+    for(const[i,j]of moves(s)){const t=s.map(b=>b.slice());pour(t,i,j);
+      const r=dfs(t,[...p,[i,j]]);if(r)return r}
+    return null};
+  return dfs(s0,[])}
+
+function gen(L){const r=rng(L*7919+13),c=Math.min(3+((L-1)>>1),12);let s;
+  for(let t=0;t<12;t++){const u=[];for(let i=0;i<c;i++)u.push(i,i,i,i);
+    for(let i=u.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[u[i],u[j]]=[u[j],u[i]]}
+    s=[];for(let i=0;i<c;i++)s.push(u.slice(i*4,i*4+4));s.push([],[]);
+    if(s.some(full))continue;if(solve(s,6000))return s}
+  return s}
+
+function render(){const B=$('#board');B.innerHTML='';
+  bt.forEach((b,i)=>{const d=document.createElement('div');
+    d.className='bt'+(i==sel?' sel':'')+(full(b)?' ok':'');
+    d.onclick=()=>tap(i);
+    b.forEach(c=>{const e=document.createElement('i');e.style.background=COL[c];d.appendChild(e)});
+    B.appendChild(d)});
+  $('#lv').textContent=lvl}
+
+let lock=false;
+function tap(i){if(lock)return;
+  if(sel<0){if(bt[i].length&&!full(bt[i]))sel=i}
+  else if(sel==i)sel=-1;
+  else if(canPour(bt[sel],bt[i])){doPour(sel,i);return}
+  else sel=(bt[i].length&&!full(bt[i]))?i:-1;
+  render()}
+
+function doPour(a,b){hist.push(bt.map(x=>x.slice()));pour(bt,a,b);sel=-1;render();if(solved(bt))setTimeout(()=>$('#win').classList.add('on'),500)}
+
+function load(L){lvl=Math.max(1,L);try{localStorage.setItem('ws_lvl',lvl)}catch(e){}
+  bt=gen(lvl);hist=[];sel=-1;added=false;$('#win').classList.remove('on');render()}
+
+$('#undo').onclick=()=>{if(hist.length){bt=hist.pop();sel=-1;render()}};
+$('#redo').onclick=()=>load(lvl);
+$('#prev').onclick=()=>load(lvl-1);
+$('#next').onclick=()=>load(lvl+1);
+$('#go').onclick=()=>load(lvl+1);
+$('#add').onclick=()=>{if(!added){hist.push(bt.map(x=>x.slice()));bt.push([]);added=true;render()}};
+$('#hint').onclick=()=>{const p=solve(bt,9000);if(!p||!p.length)return;
+  const k=$('#board').children;[p[0][0],p[0][1]].forEach(i=>{k[i].classList.add('hint')})};
+load(lvl);
+</script>
+</body>
+</html>

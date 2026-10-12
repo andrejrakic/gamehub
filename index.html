@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Igrice</title>
+<meta name="theme-color" content="#1d2b3d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🧠</text></svg>">
+<style>
+:root{--bg:#1d2b3d;--fg:#fff;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="light"]){--bg:#1d2b3d}}
+:root[data-theme="dark"]{--bg:#1d2b3d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Baloo 2","Trebuchet MS",system-ui,sans-serif;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+main{max-width:460px;margin:0 auto;padding:28px 20px 40px;display:flex;flex-direction:column;gap:18px}
+h1{margin:0 0 4px;text-align:center;font-size:64px;line-height:1}
+.t{display:flex;align-items:center;gap:20px;padding:20px 24px;border-radius:28px;color:#fff;text-decoration:none;box-shadow:0 6px 0 rgba(0,0,0,.28);transition:transform .12s}
+.t:active{transform:translateY(4px);box-shadow:0 2px 0 rgba(0,0,0,.28)}
+.t span{font-size:64px;line-height:1}
+.t b{font-size:30px;font-weight:800}
+.a{background:#1e88e5}.b{background:#8e24aa}.c{background:#f57c00}.d{background:#43a047}.e{background:#e91e63}.f{background:#00897b}
+</style>
+</head>
+<body>
+<main>
+  <h1>🧠</h1>
+  <a class="t a" href="watersort.html"><span>🧪</span><b>Boce</b></a>
+  <a class="t b" href="queens.html"><span>👑</span><b>Kraljice</b></a>
+  <a class="t c" href="zip.html"><span>🧩</span><b>Zip</b></a>
+  <a class="t d" href="sudoku.html"><span>🔢</span><b>Sudoku</b></a>
+  <a class="t e" href="tango.html"><span>☀️</span><b>Tango</b></a>
+  <a class="t f" href="patches.html"><span>🟦</span><b>Patches</b></a>
+</main>
+<script>if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))</script>
+</body>
+</html>
