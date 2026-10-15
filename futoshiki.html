@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Futoshiki</title>
+<meta name="theme-color" content="#1d2b3d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>⚖️</text></svg>">
+<style>
+:root{--bg:#1d2b3d;--fg:#fff;--btn:#33506f;--ok:#43c25a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="light"]){--bg:#1d2b3d}}
+:root[data-theme="dark"]{--bg:#1d2b3d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;
+-webkit-tap-highlight-color:transparent;touch-action:manipulation;overflow-x:hidden}
+.top{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 8px 4px;flex-wrap:wrap}
+.top button,.home{width:46px;height:46px;border-radius:50%;border:0;background:var(--btn);color:var(--fg);font-size:22px;line-height:1;
+display:flex;align-items:center;justify-content:center;text-decoration:none}
+.top button:active{transform:scale(.92)}
+.lvl{display:flex;align-items:center;gap:6px;font-size:28px;font-weight:800;min-width:84px;justify-content:center}
+.lvl button{width:40px;height:40px;font-size:16px}
+@keyframes hop{40%{transform:translateY(-10px) scale(1.08)}}
+#win{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,18,30,.88);gap:12px;z-index:9}
+#win.on{display:flex}
+#win .big{font-size:96px;animation:pop .6s}
+#win .st{font-size:44px;letter-spacing:6px}
+#win button{width:96px;height:96px;border-radius:50%;border:0;background:var(--ok);color:#fff;font-size:44px;margin-top:16px}
+@keyframes pop{0%{transform:scale(.2) rotate(-20deg)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+:root{--s:min(92vw,420px)}
+#g{display:grid;gap:5px;width:var(--s);margin:30px auto 16px}
+.c{position:relative;aspect-ratio:1;display:flex;align-items:center;justify-content:center;background:#34495f;border-radius:10px;color:#ffb74d;
+font-size:calc(var(--s) / var(--n) * .5);font-weight:800;line-height:1}
+.c.g{background:#1f3144;color:#fff}
+.c.s{background:#4f7aa6}
+.k{position:absolute;width:22px;height:22px;border-radius:50%;background:#12202f;border:2px solid #fff;color:#fff;font-size:13px;font-weight:900;
+font-style:normal;display:flex;align-items:center;justify-content:center;z-index:2;pointer-events:none;font-family:system-ui,sans-serif}
+.k.r{right:-14px;top:calc(50% - 11px)}
+.k.d{bottom:-14px;left:calc(50% - 11px)}
+#pad{display:flex;gap:6px;width:var(--s);justify-content:center}
+#pad button{flex:1 1 0;min-width:0;max-width:60px;height:54px;border-radius:14px;border:0;background:var(--btn);color:#fff;font-size:24px;font-weight:800}
+#pad button:active{transform:scale(.94)}
+.cheer .c{animation:hop .7s ease both;animation-delay:calc(var(--i)*.08s)}
+
+</style>
+</head>
+<body>
+<div class="top">
+  <a class="home" href="index.html">🏠</a>
+  <button id="undo" aria-label="undo">↶</button>
+  <button id="hint" aria-label="hint">💡</button>
+  <div class="lvl"><button id="prev">◀</button><span id="lv">1</span><button id="next">▶</button></div>
+  <button id="redo" aria-label="restart">↻</button>
+</div>
+<div id="g"></div><div id="pad"></div>
+<div id="win"><div class="big">🎉</div><div class="st">⭐⭐⭐</div><button id="go">▶</button></div>
+<script>
+const $=s=>document.querySelector(s);
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+let lvl=1,n=4,sol=[],giv=[],cons=[],g=[],sel=-1,hist=[],lock=false;
+try{lvl=Math.max(1,+localStorage.getItem('f_lvl')||1)}catch(e){}
+
+// cons: [smaller cell, larger cell] for neighbouring cells
+function count(n,gv,cs,lim,r){const a=Array(n*n).fill(0),nl={};
+  cs.forEach(c=>c.forEach(x=>(nl[x]=nl[x]||[]).push(c)));
+  let c=0,s=null;
+  const go=i=>{if(c>=lim)return;if(i==n*n){c++;s=s||a.slice();return}
+    const y=(i/n)|0,x=i%n,vs=gv[i]?[gv[i]]:[...Array(n)].map((_,k)=>k+1);if(r)vs.sort(()=>r()-.5);
+    for(const v of vs){let ok=true;
+      for(let k=0;k<x&&ok;k++)if(a[y*n+k]==v)ok=false;
+      for(let k=0;k<y&&ok;k++)if(a[k*n+x]==v)ok=false;
+      if(!ok)continue;a[i]=v;
+      for(const[p,q]of nl[i]||[])if(a[p]&&a[q]&&a[p]>=a[q]){ok=false;break}
+      if(ok)go(i+1);a[i]=0;if(c>=lim)return}};
+  go(0);return{c,s}}
+
+const solved=()=>g.every(v=>v)&&cons.every(([s,l])=>g[s]<g[l])&&
+  [...Array(n).keys()].every(k=>new Set(g.slice(k*n,k*n+n)).size==n&&new Set([...Array(n)].map((_,i)=>g[i*n+k])).size==n);
+
+function render(){const G=$('#g'),kb={};G.style.setProperty('--n',n);G.style.gridTemplateColumns=`repeat(${n},1fr)`;
+  cons.forEach(([s,l])=>{const a=Math.min(s,l),b=Math.max(s,l),h=b==a+1;
+    kb[a]=(kb[a]||'')+`<i class="k ${h?'r':'d'}">${h?(s==a?'<':'>'):(s==a?'∧':'∨')}</i>`});
+  G.innerHTML=g.map((v,i)=>`<div class="c${giv[i]?' g':''}${i==sel?' s':''}" data-i="${i}">${v||''}${kb[i]||''}</div>`).join('');
+  $('#lv').textContent=lvl}
+
+function check(){if(lock||!solved())return;lock=true;const G=$('#g');G.classList.add('cheer');
+  G.querySelectorAll('.c').forEach((e,i)=>e.style.setProperty('--i',i%n+((i/n)|0)));
+  setTimeout(()=>{G.classList.remove('cheer');lock=false;$('#win').classList.add('on')},1400)}
+
+function load(L){lvl=Math.max(1,L);try{localStorage.setItem('f_lvl',lvl)}catch(e){}
+  const r=rng(L*77137+3),sh=a=>a.sort(()=>r()-.5);n=L<=5?4:5;
+  sol=count(n,Array(n*n).fill(0),[],1,r).s;
+  const items=[];
+  for(let i=0;i<n*n;i++){items.push({k:'g',i});if(i%n<n-1)items.push({k:'c',a:i,b:i+1});if(i<n*n-n)items.push({k:'c',a:i,b:i+n})}
+  sh(items);
+  const build=u=>{const gv=Array(n*n).fill(0),cs=[];
+    u.forEach(it=>{if(it.k=='g')gv[it.i]=sol[it.i];else cs.push(sol[it.a]<sol[it.b]?[it.a,it.b]:[it.b,it.a])});return[gv,cs]};
+  const uniq=u=>{const[gv,cs]=build(u);return count(n,gv,cs,2).c==1};
+  let use=[];for(const it of items){use.push(it);if(use.length>=3&&uniq(use))break}
+  const p=Math.min(.9,.1*L);
+  for(const it of sh(use.slice())){if(r()<p){const t=use.filter(x=>x!=it);if(uniq(t))use=t}}
+  [giv,cons]=build(use);g=giv.slice();sel=-1;hist=[];lock=false;
+  $('#pad').innerHTML=[...Array(n)].map((_,k)=>`<button data-v="${k+1}">${k+1}</button>`).join('')+'<button data-v="0">⌫</button>';
+  $('#win').classList.remove('on');render()}
+
+function put(v){if(sel<0||lock||giv[sel])return;hist.push(g.slice());g[sel]=v;render();check()}
+$('#g').onclick=e=>{const d=e.target.closest('.c');if(!d||lock)return;const i=+d.dataset.i;if(!giv[i]){sel=i;render()}};
+$('#pad').onclick=e=>{const b=e.target.closest('button');if(b)put(+b.dataset.v)};
+$('#undo').onclick=()=>{if(hist.length&&!lock){g=hist.pop();render()}};
+$('#redo').onclick=()=>{if(lock)return;hist.push(g.slice());g=giv.slice();render()};
+$('#prev').onclick=()=>load(lvl-1);
+$('#next').onclick=()=>load(lvl+1);
+$('#go').onclick=()=>load(lvl+1);
+$('#hint').onclick=()=>{if(lock)return;
+  let i=sel>=0&&!giv[sel]?sel:g.findIndex((v,k)=>!giv[k]&&v&&v!=sol[k]);
+  if(i<0)i=g.findIndex(v=>!v);if(i<0)return;
+  hist.push(g.slice());sel=i;g[i]=sol[i];render();check()};
+load(lvl);
+
+</script>
+</body>
+</html>

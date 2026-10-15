@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sokoban</title>
+<meta name="theme-color" content="#1d2b3d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>📦</text></svg>">
+<style>
+:root{--bg:#1d2b3d;--fg:#fff;--btn:#33506f;--ok:#43c25a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="light"]){--bg:#1d2b3d}}
+:root[data-theme="dark"]{--bg:#1d2b3d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;
+-webkit-tap-highlight-color:transparent;touch-action:manipulation;overflow-x:hidden}
+.top{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 8px 4px;flex-wrap:wrap}
+.top button,.home{width:46px;height:46px;border-radius:50%;border:0;background:var(--btn);color:var(--fg);font-size:22px;line-height:1;
+display:flex;align-items:center;justify-content:center;text-decoration:none}
+.top button:active{transform:scale(.92)}
+.lvl{display:flex;align-items:center;gap:6px;font-size:28px;font-weight:800;min-width:84px;justify-content:center}
+.lvl button{width:40px;height:40px;font-size:16px}
+@keyframes hop{40%{transform:translateY(-10px) scale(1.08)}}
+#win{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,18,30,.88);gap:12px;z-index:9}
+#win.on{display:flex}
+#win .big{font-size:96px;animation:pop .6s}
+#win .st{font-size:44px;letter-spacing:6px}
+#win button{width:96px;height:96px;border-radius:50%;border:0;background:var(--ok);color:#fff;font-size:44px;margin-top:16px}
+@keyframes pop{0%{transform:scale(.2) rotate(-20deg)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+:root{--s:min(94vw,440px)}
+#b{position:relative;width:var(--s);height:var(--s);margin:16px auto 10px;background:#243649;border-radius:10px;overflow:hidden;touch-action:none}
+#b i{position:absolute;box-sizing:border-box}
+#b .f{background:#2f4660;border:1px solid rgba(255,255,255,.05)}
+#b .w{background:#6d4c41;border:2px solid #4e342e;border-radius:4px;box-shadow:inset 0 -4px 0 rgba(0,0,0,.25)}
+#b .g::after{content:"";position:absolute;inset:30%;border-radius:50%;border:3px solid #ffd54f}
+.sp{position:absolute;display:flex;align-items:center;justify-content:center;font-size:calc(var(--s) / var(--n) * .62);line-height:1;font-weight:400;transition:left .13s,top .13s}
+.bx.on{background:rgba(67,194,90,.55);border-radius:8px}
+.cheer .sp{animation:hop .6s ease both}
+#dp{display:grid;grid-template-columns:repeat(3,64px);grid-template-rows:repeat(2,64px);gap:8px;justify-content:center;margin:6px 0 26px}
+#dp button{border:0;border-radius:16px;background:var(--btn);color:#fff;font-size:26px;line-height:1}
+#dp button:active{transform:scale(.92)}
+#dp .u{grid-column:2;grid-row:1}#dp .l{grid-column:1;grid-row:2}#dp .d{grid-column:2;grid-row:2}#dp .r{grid-column:3;grid-row:2}
+
+</style>
+</head>
+<body>
+<div class="top">
+  <a class="home" href="index.html">🏠</a>
+  <button id="undo" aria-label="undo">↶</button>
+  <button id="hint" aria-label="hint">💡</button>
+  <div class="lvl"><button id="prev">◀</button><span id="lv">1</span><button id="next">▶</button></div>
+  <button id="redo" aria-label="restart">↻</button>
+</div>
+<div id="b"></div><div id="dp"><button class="u" data-k="0">▲</button><button class="l" data-k="1">◀</button><button class="d" data-k="2">▼</button><button class="r" data-k="3">▶</button></div>
+<div id="win"><div class="big">🎉</div><div class="st">⭐⭐⭐</div><button id="go">▶</button></div>
+<script>
+const $=s=>document.querySelector(s);
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+let lvl=1,n=6,wall=[],goal=[],box=[],pl=0,st0=null,hist=[],lock=false;
+try{lvl=Math.max(1,+localStorage.getItem('k2_lvl')||1)}catch(e){}
+const B=$('#b'),dirs=()=>[-n,-1,n,1];
+const snap=()=>({b:box.slice(),p:pl});
+const restore=s=>{box=s.b.slice();pl=s.p};
+
+// puzzles are built backwards: start solved, then "pull" boxes away -> always solvable
+function gen(L){const r=rng(L*31337+11);n=L<=4?6:L<=12?7:8;
+  const nb=Math.min(1+((L-1)/2|0),5),tgt=Math.min(8+L*2,70),D=dirs();
+  for(let t=0;t<200;t++){
+    const w=Array(n*n).fill(0),den=t>=150?0:(L<3?.06:.13);
+    for(let i=0;i<n*n;i++){const x=i%n,y=i/n|0;if(!x||!y||x==n-1||y==n-1)w[i]=1;else if(r()<den)w[i]=1}
+    const fl=[...w.keys()].filter(i=>!w[i]);if(fl.length<nb+8)continue;
+    const seen=new Set([fl[0]]),s=[fl[0]];
+    while(s.length){const c=s.pop();for(const d of D){const q=c+d;if(!w[q]&&!seen.has(q)){seen.add(q);s.push(q)}}}
+    if(seen.size!=fl.length)continue;
+    const sh=[...fl].sort(()=>r()-.5),goals=sh.slice(0,nb),bx=goals.slice();let p=sh[nb],pulls=0;
+    for(let k=0;k<6000&&pulls<tgt;k++){const d=D[r()*4|0],q=p+d;
+      if(w[q]||bx.includes(q))continue;
+      const bi=bx.indexOf(p-d);if(bi>=0&&r()<.7){bx[bi]=p;pulls++}
+      p=q}
+    if(bx.filter(b=>!goals.includes(b)).length>=Math.max(1,nb-1)||t==199)return{w,goals,bx,p}}}
+
+function build(){let h='';
+  for(let i=0;i<n*n;i++)h+=`<i class="${wall[i]?'w':'f'}${goal.includes(i)?' g':''}" style="left:${i%n/n*100}%;top:${(i/n|0)/n*100}%;width:${100/n}%;height:${100/n}%"></i>`;
+  h+=box.map(()=>'<b class="sp bx">📦</b>').join('')+'<b class="sp pl">🐻</b>';
+  B.innerHTML=h;B.style.setProperty('--n',n);place();$('#lv').textContent=lvl}
+
+const pos=(e,c)=>{e.style.left=c%n/n*100+'%';e.style.top=(c/n|0)/n*100+'%';e.style.width=e.style.height=100/n+'%'};
+function place(){B.querySelectorAll('.bx').forEach((e,k)=>{pos(e,box[k]);e.classList.toggle('on',goal.includes(box[k]))});
+  pos(B.querySelector('.pl'),pl)}
+
+function move(d){const q=pl+d;if(wall[q])return false;const bi=box.indexOf(q);
+  if(bi>=0){const qq=q+d;if(wall[qq]||box.includes(qq))return false;box[bi]=qq}
+  pl=q;return true}
+
+function check(){if(lock||!box.every(b=>goal.includes(b)))return;lock=true;B.classList.add('cheer');
+  setTimeout(()=>{B.classList.remove('cheer');lock=false;$('#win').classList.add('on')},1000)}
+
+function step(k){if(lock)return;const s=snap();if(move(dirs()[k])){hist.push(s);place();check()}}
+
+function load(L){lvl=Math.max(1,L);try{localStorage.setItem('k2_lvl',lvl)}catch(e){}
+  const g=gen(lvl);wall=g.w;goal=g.goals;box=g.bx;pl=g.p;st0=snap();hist=[];lock=false;
+  $('#win').classList.remove('on');build()}
+
+// ---- hint: BFS over pushes, then walk to the first push
+function solveFrom(b0,p0){const D=dirs(),gs=new Set(goal);
+  const dead=c=>!gs.has(c)&&(wall[c-n]||wall[c+n])&&(wall[c-1]||wall[c+1]);
+  const flood=(b,p)=>{const occ=new Set(b),seen=new Set([p]),s=[p];
+    while(s.length){const c=s.pop();for(const d of D){const q=c+d;if(!wall[q]&&!occ.has(q)&&!seen.has(q)){seen.add(q);s.push(q)}}}return seen};
+  const key=(b,z)=>b.slice().sort((x,y)=>x-y).join()+'|'+Math.min(...z);
+  const Q=[{b:b0,p:p0,first:null}],vis=new Set([key(b0,flood(b0,p0))]);
+  for(let h=0;h<Q.length&&Q.length<30000;h++){const s=Q[h];
+    if(s.b.every(c=>gs.has(c)))return s.first;
+    const reach=flood(s.b,s.p);
+    for(let i=0;i<s.b.length;i++)for(const d of D){const c=s.b[i],to=c+d;
+      if(!reach.has(c-d)||wall[to]||s.b.includes(to)||dead(to))continue;
+      const nb=s.b.slice();nb[i]=to;const k=key(nb,flood(nb,c));
+      if(vis.has(k))continue;vis.add(k);Q.push({b:nb,p:c,first:s.first||{c,d}})}}
+  return null}
+
+function pathTo(f){const D=dirs(),target=f.c-f.d,occ=new Set(box),prev=new Map([[pl,null]]),Q=[pl];
+  for(let h=0;h<Q.length;h++){const c=Q[h];if(c==target)break;
+    for(const d of D){const q=c+d;if(wall[q]||occ.has(q)||prev.has(q))continue;prev.set(q,[c,d]);Q.push(q)}}
+  const seq=[];for(let c=target;prev.get(c);c=prev.get(c)[0])seq.push(prev.get(c)[1]);
+  return seq.reverse().concat([f.d])}
+
+function hintGo(){if(lock)return;const f=solveFrom(box.slice(),pl);if(!f)return;
+  const seq=pathTo(f);hist.push(snap());lock=true;let i=0;
+  const t=setInterval(()=>{move(seq[i++]);place();if(i>=seq.length){clearInterval(t);lock=false;check()}},170)}
+
+// ---- input: drag/swipe on the board, d-pad, arrow keys
+let an=null;
+B.onpointerdown=e=>{an={x:e.clientX,y:e.clientY};B.setPointerCapture(e.pointerId)};
+B.onpointermove=e=>{if(!an)return;const dx=e.clientX-an.x,dy=e.clientY-an.y,cs=B.clientWidth/n*.6;
+  if(Math.max(Math.abs(dx),Math.abs(dy))<cs)return;
+  step(Math.abs(dx)>Math.abs(dy)?(dx>0?3:1):(dy>0?2:0));an={x:e.clientX,y:e.clientY}};
+B.onpointerup=B.onpointercancel=()=>{an=null};
+$('#dp').onpointerdown=e=>{const b=e.target.closest('button');if(b){e.preventDefault();step(+b.dataset.k)}};
+addEventListener('keydown',e=>{const k=['ArrowUp','ArrowLeft','ArrowDown','ArrowRight'].indexOf(e.key);if(k>=0){e.preventDefault();step(k)}});
+
+$('#undo').onclick=()=>{if(hist.length&&!lock){restore(hist.pop());place()}};
+$('#redo').onclick=()=>{if(lock)return;hist.push(snap());restore(st0);place()};
+$('#prev').onclick=()=>load(lvl-1);
+$('#next').onclick=()=>load(lvl+1);
+$('#go').onclick=()=>load(lvl+1);
+$('#hint').onclick=hintGo;
+load(lvl);
+
+</script>
+</body>
+</html>
