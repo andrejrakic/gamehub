@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="sr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Memory</title>
+<meta name="theme-color" content="#1d2b3d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>🧠</text></svg>">
+<style>
+:root{--bg:#1d2b3d;--fg:#fff;--btn:#33506f;--ok:#43c25a;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:light){:root:not([data-theme="light"]){--bg:#1d2b3d}}
+:root[data-theme="dark"]{--bg:#1d2b3d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:"Baloo 2","Trebuchet MS",system-ui,sans-serif;
+display:flex;flex-direction:column;align-items:center;user-select:none;-webkit-user-select:none;
+-webkit-tap-highlight-color:transparent;touch-action:manipulation;overflow-x:hidden}
+.top{display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 8px 4px;flex-wrap:wrap}
+.top button,.home{width:46px;height:46px;border-radius:50%;border:0;background:var(--btn);color:var(--fg);font-size:22px;line-height:1;
+display:flex;align-items:center;justify-content:center;text-decoration:none}
+.top button:active{transform:scale(.92)}
+.lvl{display:flex;align-items:center;gap:6px;font-size:28px;font-weight:800;min-width:84px;justify-content:center}
+.lvl button{width:40px;height:40px;font-size:16px}
+@keyframes hop{40%{transform:translateY(-10px) scale(1.08)}}
+#win{position:fixed;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(10,18,30,.88);gap:12px;z-index:9}
+#win.on{display:flex}
+#win .big{font-size:96px;animation:pop .6s}
+#win .st{font-size:44px;letter-spacing:6px}
+#win button{width:96px;height:96px;border-radius:50%;border:0;background:var(--ok);color:#fff;font-size:44px;margin-top:16px}
+@keyframes pop{0%{transform:scale(.2) rotate(-20deg)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+:root{--s:min(92vw,440px)}
+#g{display:grid;gap:10px;width:var(--s);margin:28px auto}
+.cd{aspect-ratio:1;perspective:600px}
+.in{position:relative;width:100%;height:100%;transition:transform .35s;transform-style:preserve-3d}
+.cd.s1 .in,.cd.s2 .in{transform:rotateY(180deg)}
+.f,.b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;border-radius:14px;backface-visibility:hidden;-webkit-backface-visibility:hidden;
+font-size:calc(var(--s) / var(--c) * .5);font-weight:400;line-height:1}
+.f{background:#34495f;color:rgba(255,255,255,.3);font-weight:800;box-shadow:inset 0 -5px 0 rgba(0,0,0,.2)}
+.b{background:#f5f5f5;transform:rotateY(180deg)}
+.s2 .b{background:#c8e6c9}
+.cheer .cd{animation:hop .6s ease both;animation-delay:calc(var(--i)*.06s)}
+
+</style>
+</head>
+<body>
+<div class="top">
+  <a class="home" href="index.html">🏠</a>
+  <button id="undo" aria-label="undo">↶</button>
+  <button id="hint" aria-label="hint">💡</button>
+  <div class="lvl"><button id="prev">◀</button><span id="lv">1</span><button id="next">▶</button></div>
+  <button id="redo" aria-label="restart">↻</button>
+</div>
+<div id="g"></div>
+<div id="win"><div class="big">🎉</div><div class="st">⭐⭐⭐</div><button id="go">▶</button></div>
+<script>
+const $=s=>document.querySelector(s);
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+
+let lvl=1,att=0,cards=[],fl=[],lock=false,left=0,cols=3;
+try{lvl=Math.max(1,+localStorage.getItem('e_lvl')||1)}catch(e){}
+const EM=['🐶','🐱','🐭','🐰','🦊','🐻','🐼','🐸','🦁','🐮','🐷','🐵','🐔','🐧','🦉','🦋','🐢','🐙','🐬','🐞'];
+$('#undo').style.display='none';
+
+function build(){const G=$('#g');cols=cards.length==6?3:4;
+  G.style.gridTemplateColumns=`repeat(${cols},1fr)`;G.style.setProperty('--c',cols);
+  G.innerHTML=cards.map((c,i)=>`<div class="cd" data-i="${i}"><div class="in"><b class="f">?</b><b class="b">${c.v}</b></div></div>`).join('');
+  $('#lv').textContent=lvl}
+const upd=i=>{const e=$('#g').children[i];if(e)e.className='cd s'+cards[i].s};
+
+function load(L){lvl=Math.max(1,L);try{localStorage.setItem('e_lvl',lvl)}catch(e){}
+  const pr=[3,4,6,8,10,12][Math.min((lvl-1)/2|0,5)],r=rng(lvl*3571+att*101+1);
+  const e=[...EM].sort(()=>r()-.5).slice(0,pr);
+  cards=[...e,...e].sort(()=>r()-.5).map(v=>({v,s:0}));fl=[];lock=false;left=pr;
+  $('#win').classList.remove('on');build()}
+
+function win(){lock=true;const G=$('#g');G.classList.add('cheer');
+  [...G.children].forEach((e,i)=>e.style.setProperty('--i',i));
+  setTimeout(()=>{G.classList.remove('cheer');lock=false;$('#win').classList.add('on')},1300)}
+
+function resolve(){const[a,b]=fl;
+  if(cards[a].v==cards[b].v){cards[a].s=cards[b].s=2;left--}else cards[a].s=cards[b].s=0;
+  fl=[];upd(a);upd(b);lock=false;if(!left)win()}
+
+function tap(i){if(lock||cards[i].s)return;cards[i].s=1;upd(i);fl.push(i);
+  if(fl.length<2)return;lock=true;setTimeout(resolve,cards[fl[0]].v==cards[fl[1]].v?450:900)}
+
+$('#g').onclick=e=>{const d=e.target.closest('.cd');if(d)tap(+d.dataset.i)};
+$('#redo').onclick=()=>{if(lock)return;att++;load(lvl)};
+$('#prev').onclick=()=>{att=0;load(lvl-1)};
+$('#next').onclick=()=>{att=0;load(lvl+1)};
+$('#go').onclick=()=>{att=0;load(lvl+1)};
+$('#hint').onclick=()=>{if(lock)return;const m={};
+  cards.forEach((c,i)=>{if(!c.s)(m[c.v]=m[c.v]||[]).push(i)});
+  const p=Object.values(m).find(a=>a.length==2);if(!p)return;
+  lock=true;p.forEach(i=>{cards[i].s=1;upd(i)});
+  setTimeout(()=>{p.forEach(i=>{cards[i].s=0;upd(i)});lock=false},1000)};
+load(lvl);
+
+</script>
+</body>
+</html>
