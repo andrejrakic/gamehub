@@ -51,6 +51,11 @@ font-style:normal;display:flex;align-items:center;justify-content:center;z-index
 #pad button:active{transform:scale(.94)}
 .cheer .c{animation:hop .7s ease both;animation-delay:calc(var(--i)*.08s)}
 
+.rules{width:min(92vw,440px);margin:6px auto 28px;background:rgba(255,255,255,.06);border-radius:16px;padding:4px 16px 12px;box-sizing:border-box;font-size:16px;line-height:1.35}
+.rules summary{font-weight:800;font-size:18px;padding:10px 0;cursor:pointer}
+.rules ul{margin:0;padding-left:20px}
+.rules li{margin:6px 0}
+.rules p{margin:10px 0 0;opacity:.7;font-size:14px}
 </style>
 </head>
 <body>
@@ -62,6 +67,15 @@ font-style:normal;display:flex;align-items:center;justify-content:center;z-index
   <button id="redo" aria-label="restart">↻</button>
 </div>
 <div id="g"></div><div id="pad"></div>
+<details class="rules" open>
+  <summary>Како се игра</summary>
+  <ul>
+    <li>У сваки ред и колону иду сви бројеви од 1 до величине табле, тачно једном.</li>
+    <li>Знаци између поља показују који је број већи: знак се отвара према већем броју (< > ∧ ∨).</li>
+    <li>Бели бројеви су већ задати. Додирни празно поље, па изабери број испод табле.</li>
+  </ul>
+  <p>💡 помоћ · ↶ врати потез · ↻ испочетка · ◀ ▶ нивои</p>
+</details>
 <div id="win"><div class="big">🎉</div><div class="st">⭐⭐⭐</div><button id="go">▶</button></div>
 <script>
 const $=s=>document.querySelector(s);

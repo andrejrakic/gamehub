@@ -45,6 +45,11 @@ font-size:calc(var(--s) / var(--n) * .5);font-weight:800;border:1px solid rgba(2
 #win button{width:96px;height:96px;border-radius:50%;border:0;background:var(--ok);color:#fff;font-size:44px;margin-top:16px}
 @keyframes pop{0%{transform:scale(.2) rotate(-20deg)}70%{transform:scale(1.2)}100%{transform:scale(1)}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+.rules{width:min(92vw,440px);margin:6px auto 28px;background:rgba(255,255,255,.06);border-radius:16px;padding:4px 16px 12px;box-sizing:border-box;font-size:16px;line-height:1.35}
+.rules summary{font-weight:800;font-size:18px;padding:10px 0;cursor:pointer}
+.rules ul{margin:0;padding-left:20px}
+.rules li{margin:6px 0}
+.rules p{margin:10px 0 0;opacity:.7;font-size:14px}
 </style>
 </head>
 <body>
@@ -57,6 +62,16 @@ font-size:calc(var(--s) / var(--n) * .5);font-weight:800;border:1px solid rgba(2
 </div>
 <div id="g"></div>
 <div id="pad"></div>
+<details class="rules" open>
+  <summary>Како се игра</summary>
+  <ul>
+    <li>У сваки ред, колону и оквир (омеђен дебелом линијом) иду сви бројеви тачно једном.</li>
+    <li>Додирни празно поље, па изабери број испод табле.</li>
+    <li>Црвени број значи да се понавља у реду, колони или оквиру.</li>
+    <li>⌫ брише број.</li>
+  </ul>
+  <p>💡 помоћ · ↶ врати потез · ↻ испочетка · ◀ ▶ нивои</p>
+</details>
 <div id="win"><div class="big">🎉</div><div class="st">⭐⭐⭐</div><button id="go">▶</button></div>
 <script>
 const $=s=>document.querySelector(s);

@@ -48,6 +48,11 @@ color:rgba(255,255,255,.55);font-size:calc(var(--cs) * .5)}
 .c.f{background:#ffb74d}
 .cheer .c{animation:hop .7s ease both;animation-delay:calc(var(--i)*.08s)}
 
+.rules{width:min(92vw,440px);margin:6px auto 28px;background:rgba(255,255,255,.06);border-radius:16px;padding:4px 16px 12px;box-sizing:border-box;font-size:16px;line-height:1.35}
+.rules summary{font-weight:800;font-size:18px;padding:10px 0;cursor:pointer}
+.rules ul{margin:0;padding-left:20px}
+.rules li{margin:6px 0}
+.rules p{margin:10px 0 0;opacity:.7;font-size:14px}
 </style>
 </head>
 <body>
@@ -59,6 +64,16 @@ color:rgba(255,255,255,.55);font-size:calc(var(--cs) * .5)}
   <button id="redo" aria-label="restart">↻</button>
 </div>
 <div id="g"></div>
+<details class="rules" open>
+  <summary>Како се игра</summary>
+  <ul>
+    <li>Бројеви уз ред или колону кажу колико узастопних поља треба обојити.</li>
+    <li>Више бројева значи више група, са бар једним празним пољем између њих.</li>
+    <li>Додир: празно → обојено → ✕ (✕ значи „овде сигурно нема ништа“).</li>
+    <li>Када је ред или колона тачна, њени бројеви побледе.</li>
+  </ul>
+  <p>💡 помоћ · ↶ врати потез · ↻ испочетка · ◀ ▶ нивои</p>
+</details>
 <div id="win"><div class="big">🖼️</div><div class="st">⭐⭐⭐</div><button id="go">▶</button></div>
 <script>
 const $=s=>document.querySelector(s);
